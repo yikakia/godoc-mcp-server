@@ -1,6 +1,7 @@
 package godoc
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -9,11 +10,12 @@ import (
 )
 
 type PackageDocument struct {
-	Overview  string
-	Consts    []ConstBlock
-	Variables []VariableBlock
-	Functions []FunctionBlock
-	Types     []TypeBlock
+	Overview    string
+	Consts      []ConstBlock
+	Variables   []VariableBlock
+	Functions   []FunctionBlock
+	Types       []TypeBlock
+	SubPackages []*SubPackage
 }
 
 type ConstBlock struct {
@@ -47,6 +49,11 @@ type TypeMethod struct {
 	SourceURL  string
 	Definition string
 	Comment    string
+}
+
+type SubPackage struct {
+	Name    string
+	Comment string
 }
 
 func GetPackageDocument(pkgName string) (*PackageDocument, error) {
@@ -88,13 +95,18 @@ func extractDocResult(html string) (*PackageDocument, error) {
 	if err != nil {
 		return nil, err
 	}
+	subPackages, err := extractSubPackages(doc)
+	if err != nil {
+		return nil, err
+	}
 
 	return &PackageDocument{
-		Overview:  overview,
-		Consts:    consts,
-		Variables: variables,
-		Functions: fns,
-		Types:     types,
+		Overview:    overview,
+		Consts:      consts,
+		Variables:   variables,
+		Functions:   fns,
+		Types:       types,
+		SubPackages: subPackages,
 	}, nil
 }
 
@@ -268,4 +280,94 @@ func extractDocTypeMethods(s *goquery.Selection) ([]TypeMethod, error) {
 			methods = append(methods, method)
 		})
 	return methods, nil
+}
+
+func extractSubPackages(doc *goquery.Document) ([]*SubPackage, error) {
+	var subPackages []*SubPackage
+	var err error
+
+	doc.Find("table[data-test-id='UnitDirectories-table']").
+		Find("tbody").
+		Children().
+		Each(func(i int, s *goquery.Selection) {
+
+			v, hasSubPackage := s.Attr("data-aria-controls")
+			fmt.Println(v, hasSubPackage, goquery.NodeName(s))
+
+			if hasSubPackage {
+				// 目录要处理自己和子包
+				dir, _err := extractSubPackageAsDir(s)
+				if _err != nil {
+					err = multierr.Append(err, _err)
+					return
+				}
+				if dir != nil {
+					subPackages = append(subPackages, dir)
+				}
+
+			} else {
+				subPackage, _err := extractSubPackage(s)
+				if _err != nil {
+					err = multierr.Append(err, _err)
+					return
+				}
+				if subPackage != nil {
+					subPackages = append(subPackages, subPackage)
+				}
+			}
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return subPackages, nil
+}
+
+func extractSubPackage(s *goquery.Selection) (*SubPackage, error) {
+	// Name
+	// 有 id 优先用id
+	// 没有 id 用 a 标签的文本
+	name := s.AttrOr("data-id", "")
+	if name == "" {
+		name = s.Find("a").Text()
+	} else {
+		name = strings.TrimSpace(name)
+		name = strings.ReplaceAll(name, "-", "/")
+	}
+	if name == "" {
+		return nil, nil
+	}
+	// comment
+	comment := s.Find("td.UnitDirectories-desktopSynopsis").Text()
+	comment = strings.TrimSpace(comment)
+	if comment == "" {
+		return nil, nil
+	}
+
+	return &SubPackage{
+		Name:    name,
+		Comment: comment,
+	}, nil
+}
+
+func extractSubPackageAsDir(s *goquery.Selection) (*SubPackage, error) {
+
+	// pathCell name
+	name := s.Find("div.UnitDirectories-pathCell").Find("span").Text()
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = s.Find("a").Text()
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return nil, nil
+		}
+	}
+	// comment
+	comment := s.Find("td.UnitDirectories-desktopSynopsis").Text()
+	comment = strings.TrimSpace(comment)
+
+	return &SubPackage{
+		Name:    name,
+		Comment: comment,
+	}, nil
 }

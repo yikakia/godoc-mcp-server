@@ -12,7 +12,7 @@ import (
 
 func getPackageInfoTool() (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("getPackageInfo",
-			mcp.WithDescription("provide a golang package name,get package consts,types,functions,variables from pkg.go.dev"),
+			mcp.WithDescription("provide a golang package name,get package consts,types,functions,variables, subpackages from pkg.go.dev"),
 			mcp.WithString("packageName",
 				mcp.Required(),
 				mcp.Description("package name for search")),
