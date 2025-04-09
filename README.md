@@ -5,7 +5,7 @@ search golang packages and their docs from pkg.go.dev, provide the infomation to
 ## Install
 
 ```shell
-go install github.com/yikakia/godoc-mcp-server@latest
+go install github.com/yikakia/godoc-mcp-server/cmd/godoc-mcp-server@latest
 ```
 
 ## Usage
