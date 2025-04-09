@@ -14,10 +14,11 @@ type SearchResult struct {
 }
 
 type SearchPackageInfo struct {
-	Name     string
-	Path     string
-	Synopsis string
-	GoDocUrl string
+	Name          string
+	Path          string
+	Synopsis      string
+	GoDocUrl      string
+	OtherPackages []string `json:"other_packages_in_this_module,omitempty"`
 }
 
 func Search(query string) (*SearchResult, error) {
@@ -74,12 +75,17 @@ func extractPackageInfo(selection *goquery.Selection) (*SearchPackageInfo, error
 	if err != nil {
 		return nil, err
 	}
+	otherPackages, err := extractOtherPackages(selection)
+	if err != nil {
+		return nil, err
+	}
 
 	return &SearchPackageInfo{
-		Name:     name,
-		Path:     path,
-		Synopsis: synopsis,
-		GoDocUrl: baseURL() + url,
+		Name:          name,
+		Path:          path,
+		Synopsis:      synopsis,
+		GoDocUrl:      baseURL() + url,
+		OtherPackages: otherPackages,
 	}, nil
 }
 
@@ -122,6 +128,31 @@ func extractPackageGoDocUrl(selection *goquery.Selection) (string, error) {
 
 	goDocUrl = strings.TrimSpace(goDocUrl)
 	return goDocUrl, nil
+}
+
+func extractOtherPackages(s *goquery.Selection) ([]string, error) {
+	var otherPackages []string
+	var moduleName string
+	tmp := s.Find("div.SearchSnippet-sub.go-textSubtle").
+		Find("strong").Text()
+	tmp = strings.TrimPrefix(tmp, "Other packages in module")
+	tmp = strings.Trim(tmp, ":")
+	moduleName = strings.TrimSpace(tmp)
+	if moduleName == "" {
+		return nil, nil
+	}
+
+	s.Find("a.go-Chip.go-Chip--subtle").
+		Each(func(i int, s *goquery.Selection) {
+			p := s.Text()
+			p = strings.TrimSpace(p)
+			if p == "" {
+				return
+			}
+			otherPackages = append(otherPackages, moduleName+"/"+p)
+		})
+
+	return otherPackages, nil
 }
 
 func getDoc(query string) (*goquery.Document, error) {
