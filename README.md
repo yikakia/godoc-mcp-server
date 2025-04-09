@@ -4,6 +4,10 @@ search golang packages and their docs from pkg.go.dev, provide the infomation to
 
 ## Install
 
+You can download the compiled binary from the [releases page](https://github.com/yikakia/godoc-mcp-server/releases/tag/latest).
+
+Or you can install it from source, compile it by yourself:
+
 ```shell
 go install github.com/yikakia/godoc-mcp-server/cmd/godoc-mcp-server@latest
 ```
@@ -19,7 +23,7 @@ just use your client to request. it servers on stdio
 - getPackageInfo
   - [ ] get examples
 - release
-  - [ ] use github actions to release for multiple platforms 
+  - [x] use github actions to release for multiple platforms 
 
 ## Library Usage
 
