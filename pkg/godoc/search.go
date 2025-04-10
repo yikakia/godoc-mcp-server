@@ -1,6 +1,7 @@
 package godoc
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -14,11 +15,12 @@ type SearchResult struct {
 }
 
 type SearchPackageInfo struct {
-	Name          string
-	Path          string
-	Synopsis      string
-	GoDocUrl      string
-	OtherPackages []string `json:"other_packages_in_this_module,omitempty"`
+	Name        string
+	Path        string
+	Synopsis    string
+	GoDocUrl    string
+	ImportedBy  int
+	SubPackages []string `json:"sub_packages,omitempty"`
 }
 
 func Search(query string) (*SearchResult, error) {
@@ -75,17 +77,23 @@ func extractPackageInfo(selection *goquery.Selection) (*SearchPackageInfo, error
 	if err != nil {
 		return nil, err
 	}
+	imptBy, err := extractImportedBy(selection)
+	if err != nil {
+		return nil, err
+	}
+
 	otherPackages, err := extractOtherPackages(selection)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SearchPackageInfo{
-		Name:          name,
-		Path:          path,
-		Synopsis:      synopsis,
-		GoDocUrl:      baseURL() + url,
-		OtherPackages: otherPackages,
+		Name:        name,
+		Path:        path,
+		Synopsis:    synopsis,
+		GoDocUrl:    baseURL() + url,
+		SubPackages: otherPackages,
+		ImportedBy:  imptBy,
 	}, nil
 }
 
@@ -117,6 +125,17 @@ func extractPackageSynopsis(selection *goquery.Selection) (string, error) {
 
 	synopsis = strings.TrimSpace(synopsis)
 	return synopsis, nil
+}
+
+func extractImportedBy(selection *goquery.Selection) (int, error) {
+
+	im := selection.
+		Find("div.SearchSnippet-infoLabel").
+		Find("a[aria-label='Go to Imported By']").
+		Find("strong").Text()
+
+	atoi, _ := strconv.Atoi(im)
+	return atoi, nil
 }
 
 func extractPackageGoDocUrl(selection *goquery.Selection) (string, error) {
