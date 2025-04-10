@@ -56,46 +56,51 @@ type SubPackage struct {
 	Comment string
 }
 
-func GetPackageDocument(pkgName string) (*PackageDocument, error) {
+type GetPackageRequest struct {
+	PackageName string
+	NeedURL     bool
+}
+
+func GetPackageDocument(req GetPackageRequest) (*PackageDocument, error) {
 	resp, err := client().
 		R().
-		Get(baseURL() + "/" + pkgName)
+		Get(baseURL() + "/" + req.PackageName)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	result, err := extractDocResult(resp.String())
+	result, err := extractDocResult(resp.String(), req)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func extractDocResult(html string) (*PackageDocument, error) {
+func extractDocResult(html string, req GetPackageRequest) (*PackageDocument, error) {
 	doc, err := getDoc(html)
 	if err != nil {
 		return nil, err
 	}
-	overview, err := extractDocOverview(doc)
+	overview, err := extractDocOverview(doc, req)
 	if err != nil {
 		return nil, err
 	}
-	consts, err := extractDocConsts(doc)
+	consts, err := extractDocConsts(doc, req)
 	if err != nil {
 		return nil, err
 	}
-	variables, err := extractDocVariables(doc)
+	variables, err := extractDocVariables(doc, req)
 	if err != nil {
 		return nil, err
 	}
-	fns, err := extractDocFunctions(doc)
+	fns, err := extractDocFunctions(doc, req)
 	if err != nil {
 		return nil, err
 	}
-	types, err := extractDocTypes(doc)
+	types, err := extractDocTypes(doc, req)
 	if err != nil {
 		return nil, err
 	}
-	subPackages, err := extractSubPackages(doc)
+	subPackages, err := extractSubPackages(doc, req)
 	if err != nil {
 		return nil, err
 	}
@@ -110,14 +115,14 @@ func extractDocResult(html string) (*PackageDocument, error) {
 	}, nil
 }
 
-func extractDocOverview(doc *goquery.Document) (string, error) {
+func extractDocOverview(doc *goquery.Document, req GetPackageRequest) (string, error) {
 	var overview string
 
 	overview = doc.Find("section.Documentation-overview p").Text()
 	return overview, nil
 }
 
-func extractDocConsts(doc *goquery.Document) ([]ConstBlock, error) {
+func extractDocConsts(doc *goquery.Document, req GetPackageRequest) ([]ConstBlock, error) {
 	var consts []ConstBlock
 	doc.
 		Find("section.Documentation-constants").
@@ -126,9 +131,12 @@ func extractDocConsts(doc *goquery.Document) ([]ConstBlock, error) {
 			// 如果现在是 div 标签，则是常量定义
 			if s.Is("div") {
 				cb := ConstBlock{}
-				// 常量定义里有超链接和定义
-				url, _ := s.Find("a.Documentation-source").Attr("href")
-				cb.SourceURL = url
+				if req.NeedURL {
+					// 常量定义里有超链接和定义
+					url, _ := s.Find("a.Documentation-source").Attr("href")
+					cb.SourceURL = url
+				}
+
 				// 找到 pre 标签，里面是定义
 				var lines []string
 				s.Find("pre").Each(func(i int, s *goquery.Selection) {
@@ -149,18 +157,20 @@ func extractDocConsts(doc *goquery.Document) ([]ConstBlock, error) {
 	return consts, nil
 }
 
-func extractDocVariables(doc *goquery.Document) ([]VariableBlock, error) {
+func extractDocVariables(doc *goquery.Document, req GetPackageRequest) ([]VariableBlock, error) {
 	var vars []VariableBlock
 	doc.
 		Find("section.Documentation-variables").
 		Children().
 		Each(func(i int, s *goquery.Selection) {
-			// 如果现在是 div 标签，则是常量定义
 			if s.Is("div") && s.AttrOr("class", "") == "Documentation-declaration" {
 				vb := VariableBlock{}
-				// 常量定义里有超链接和定义
-				url, _ := s.Find("a.Documentation-source").Attr("href")
-				vb.SourceURL = url
+				if req.NeedURL {
+					// 定义里有超链接和定义
+					url, _ := s.Find("a.Documentation-source").Attr("href")
+					vb.SourceURL = url
+				}
+
 				// 找到 pre 标签，里面是定义
 				var lines []string
 				s.Find("pre").Each(func(i int, s *goquery.Selection) {
@@ -181,7 +191,7 @@ func extractDocVariables(doc *goquery.Document) ([]VariableBlock, error) {
 	return vars, nil
 }
 
-func extractDocFunctions(doc *goquery.Document) ([]FunctionBlock, error) {
+func extractDocFunctions(doc *goquery.Document, req GetPackageRequest) ([]FunctionBlock, error) {
 	var fns []FunctionBlock
 	doc.
 		Find("section.Documentation-functions").
@@ -190,7 +200,9 @@ func extractDocFunctions(doc *goquery.Document) ([]FunctionBlock, error) {
 		Each(func(i int, s *goquery.Selection) {
 			fnb := FunctionBlock{}
 			// Documentation-source 超链接到定义
-			fnb.SourceURL = s.Find("a.Documentation-source").AttrOr("href", "")
+			if req.NeedURL {
+				fnb.SourceURL = s.Find("a.Documentation-source").AttrOr("href", "")
+			}
 
 			//Documentation-declaration 是函数定义
 			s.Find("div.Documentation-declaration").
@@ -210,7 +222,7 @@ func extractDocFunctions(doc *goquery.Document) ([]FunctionBlock, error) {
 	return fns, nil
 }
 
-func extractDocTypes(doc *goquery.Document) ([]TypeBlock, error) {
+func extractDocTypes(doc *goquery.Document, req GetPackageRequest) ([]TypeBlock, error) {
 	var types []TypeBlock
 	var err error
 	doc.
@@ -219,13 +231,15 @@ func extractDocTypes(doc *goquery.Document) ([]TypeBlock, error) {
 		Find("div.Documentation-type").
 		Each(func(i int, s *goquery.Selection) {
 			tpb := TypeBlock{}
-			// 找到 h4 标签 Documentation-typeHeader
-			// 找到 a 标签 Documentation-source
-			// 这是类型的链接
-			tpb.SourceURL = s.
-				Find("h4.Documentation-typeHeader").
-				Find("a.Documentation-source").
-				AttrOr("href", "")
+			if req.NeedURL {
+				// 找到 h4 标签 Documentation-typeHeader
+				// 找到 a 标签 Documentation-source
+				// 这是类型的链接
+				tpb.SourceURL = s.
+					Find("h4.Documentation-typeHeader").
+					Find("a.Documentation-source").
+					AttrOr("href", "")
+			}
 
 			// 找到 div.Documentation-declaration 是定义
 			s.Find("div.Documentation-declaration").
@@ -239,7 +253,7 @@ func extractDocTypes(doc *goquery.Document) ([]TypeBlock, error) {
 				})
 			// 找到p标签 是注释
 			tpb.Comment = s.Find("p").Text()
-			tpMethods, _err := extractDocTypeMethods(s)
+			tpMethods, _err := extractDocTypeMethods(s, req)
 			if _err != nil {
 				err = multierr.Append(err, _err)
 				return
@@ -254,17 +268,20 @@ func extractDocTypes(doc *goquery.Document) ([]TypeBlock, error) {
 }
 
 // 需要传入 extractDocTypes 中的 Documentation-type 节点
-func extractDocTypeMethods(s *goquery.Selection) ([]TypeMethod, error) {
+func extractDocTypeMethods(s *goquery.Selection, req GetPackageRequest) ([]TypeMethod, error) {
 	var methods []TypeMethod
 	s.
 		Find("div.Documentation-typeMethod").
 		Each(func(i int, s *goquery.Selection) {
 			method := TypeMethod{}
-			// url
-			method.SourceURL = s.
-				Find("h4.Documentation-typeMethodHeader").
-				Find("a.Documentation-source").
-				AttrOr("href", "")
+			if req.NeedURL {
+				// url
+				method.SourceURL = s.
+					Find("h4.Documentation-typeMethodHeader").
+					Find("a.Documentation-source").
+					AttrOr("href", "")
+			}
+
 			// 定义
 			s.Find("div.Documentation-declaration").
 				Each(func(i int, s *goquery.Selection) {
@@ -282,7 +299,7 @@ func extractDocTypeMethods(s *goquery.Selection) ([]TypeMethod, error) {
 	return methods, nil
 }
 
-func extractSubPackages(doc *goquery.Document) ([]*SubPackage, error) {
+func extractSubPackages(doc *goquery.Document, req GetPackageRequest) ([]*SubPackage, error) {
 	var subPackages []*SubPackage
 	var err error
 
@@ -296,7 +313,7 @@ func extractSubPackages(doc *goquery.Document) ([]*SubPackage, error) {
 
 			if hasSubPackage {
 				// 目录要处理自己和子包
-				dir, _err := extractSubPackageAsDir(s)
+				dir, _err := extractSubPackageAsDir(s, req)
 				if _err != nil {
 					err = multierr.Append(err, _err)
 					return
@@ -350,7 +367,7 @@ func extractSubPackage(s *goquery.Selection) (*SubPackage, error) {
 	}, nil
 }
 
-func extractSubPackageAsDir(s *goquery.Selection) (*SubPackage, error) {
+func extractSubPackageAsDir(s *goquery.Selection, req GetPackageRequest) (*SubPackage, error) {
 
 	// pathCell name
 	name := s.Find("div.UnitDirectories-pathCell").Find("span").Text()
