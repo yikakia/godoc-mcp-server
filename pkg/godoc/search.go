@@ -24,17 +24,23 @@ type SearchPackageInfo struct {
 }
 
 func Search(query string) (*SearchResult, error) {
-	resp, err := client().R().
-		SetQueryParams(map[string]string{
-			"q": query,
-			"m": "package",
-		}).
-		Get(baseURL() + "/search")
+	body, err := getWithFn(query, func() ([]byte, error) {
+		resp, err := client().R().
+			SetQueryParams(map[string]string{
+				"q": query,
+				"m": "package",
+			}).
+			Get(baseURL() + "/search")
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return resp.Body(), nil
+	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
-	return extractSearchResult(resp.String())
+	return extractSearchResult(string(body))
 }
 
 func extractSearchResult(query string) (*SearchResult, error) {

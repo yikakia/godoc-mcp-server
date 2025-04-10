@@ -19,7 +19,7 @@ just use your client to request. it servers on stdio
 ## Todo
 
 - localCache
-  - [ ] use a local cache to avoid search every time(From reddit user)
+  - [x] use a local cache to avoid search every time(From reddit user)
 - searchPackage
   - [x] imported by how many packages
 - getPackageInfo

@@ -13,7 +13,9 @@ import (
 func getSearchTool() (tool mcp.Tool, handler server.ToolHandlerFunc) {
 	return mcp.NewTool("searchPackages",
 			mcp.WithDescription("provide a query, search related golang packages from pkg.go.dev include "+
-				"name, path, synopsis, go doc url, imported by how many packages, subpackages in this package"),
+				"name, path, synopsis, go doc url, imported by how many packages, subpackages in this package "+
+				"the path is the package full name. if want to use getPackageInfo. llm should pass the path as "+
+				"packageName to getPackageInfo"),
 			mcp.WithString("q",
 				mcp.Required(),
 				mcp.Description("query")),

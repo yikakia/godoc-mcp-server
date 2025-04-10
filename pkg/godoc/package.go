@@ -62,13 +62,20 @@ type GetPackageRequest struct {
 }
 
 func GetPackageDocument(req GetPackageRequest) (*PackageDocument, error) {
-	resp, err := client().
-		R().
-		Get(baseURL() + "/" + req.PackageName)
+	body, err := getWithFn(req.PackageName, func() ([]byte, error) {
+		resp, err := client().
+			R().
+			Get(baseURL() + "/" + req.PackageName)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return resp.Body(), nil
+	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
-	result, err := extractDocResult(resp.String(), req)
+
+	result, err := extractDocResult(string(body), req)
 	if err != nil {
 		return nil, err
 	}
