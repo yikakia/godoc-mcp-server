@@ -24,7 +24,7 @@ type SearchPackageInfo struct {
 }
 
 func Search(query string) (*SearchResult, error) {
-	body, err := getWithFn(query, func() ([]byte, error) {
+	body, err := getWithFn("search"+query, func() ([]byte, error) {
 		resp, err := client().R().
 			SetQueryParams(map[string]string{
 				"q": query,

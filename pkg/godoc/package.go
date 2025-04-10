@@ -62,7 +62,7 @@ type GetPackageRequest struct {
 }
 
 func GetPackageDocument(req GetPackageRequest) (*PackageDocument, error) {
-	body, err := getWithFn(req.PackageName, func() ([]byte, error) {
+	body, err := getWithFn("getPkg"+req.PackageName, func() ([]byte, error) {
 		resp, err := client().
 			R().
 			Get(baseURL() + "/" + req.PackageName)
