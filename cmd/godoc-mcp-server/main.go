@@ -1,27 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"context"
+	"log"
 
-	"github.com/mark3labs/mcp-go/server"
-)
-
-var (
-	version = "1.0.0"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
-	mcpServer := server.NewMCPServer(
-		"godoc-mcp-server",
-		version,
-	)
-	mcpServer.AddTool(getSearchTool())
-	mcpServer.AddTool(getPackageInfoTool())
+	s := initServer()
 
-	_, _ = fmt.Fprintf(os.Stderr, "godoc-mcp-server running on stdio...\n")
-	err := server.ServeStdio(mcpServer)
+	err := s.Run(context.Background(), mcp.NewStdioTransport())
 	if err != nil {
-		panic(err)
+		log.Fatal("unknown err, will exit. err:", err)
 	}
 }
