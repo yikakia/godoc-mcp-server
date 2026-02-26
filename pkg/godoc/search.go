@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yikakia/cachalot"
 	"github.com/yikakia/cachalot/core/cache"
+	"github.com/yikakia/cachalot/core/codec"
 	"go.uber.org/multierr"
 	"golang.org/x/net/html"
 )
@@ -34,8 +35,7 @@ var searchCache = sync.OnceValue(func() cache.Cache[[]byte] {
 		panic(err)
 	}
 
-	// TODO 压缩解压缩
-	b.WithCacheMissLoader(searchLoader).WithLogicExpireLoader(searchLoader)
+	b.WithCacheMissLoader(searchLoader).WithLogicExpireLoader(searchLoader).WithLogicExpireBytesAdapter(true).WithCompression(codec.GzipCompressionCodec{})
 
 	build, err := b.Build()
 	if err != nil {
@@ -64,7 +64,7 @@ func searchLoader(ctx context.Context, q string) ([]byte, error) {
 	return resp.Body(), nil
 }
 
-func search(q string) ([]byte, error) {
+func doSearch(q string) ([]byte, error) {
 	get, err := searchCache().Get(context.Background(), "search"+q)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func search(q string) ([]byte, error) {
 }
 
 func Search(query string) (*SearchResult, error) {
-	cacheGet, err := search(query)
+	cacheGet, err := doSearch(query)
 	if err != nil {
 		return nil, err
 	}

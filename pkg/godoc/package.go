@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/yikakia/cachalot"
 	"github.com/yikakia/cachalot/core/cache"
+	"github.com/yikakia/cachalot/core/codec"
 	"go.uber.org/multierr"
 )
 
@@ -71,8 +72,7 @@ var pkgCache = sync.OnceValue(func() cache.Cache[[]byte] {
 		panic(err)
 	}
 
-	// TODO 压缩解压缩
-	b.WithCacheMissLoader(pkgLoader).WithLogicExpireLoader(pkgLoader)
+	b.WithCacheMissLoader(pkgLoader).WithLogicExpireLoader(pkgLoader).WithLogicExpireBytesAdapter(true).WithCompression(codec.GzipCompressionCodec{})
 
 	build, err := b.Build()
 	if err != nil {
@@ -96,8 +96,8 @@ func pkgLoader(ctx context.Context, pkgName string) ([]byte, error) {
 	return resp.Body(), nil
 }
 
-func getPkg(req GetPackageRequest) ([]byte, error) {
-	pkgGet, err := pkgCache().Get(context.Background(), "getPkg"+req.PackageName)
+func doGetPkg(pkgName string) ([]byte, error) {
+	pkgGet, err := pkgCache().Get(context.Background(), "getPkg"+pkgName)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func getPkg(req GetPackageRequest) ([]byte, error) {
 }
 
 func GetPackageDocument(req GetPackageRequest) (*PackageDocument, error) {
-	pkgGet, err := getPkg(req)
+	pkgGet, err := doGetPkg(req.PackageName)
 	if err != nil {
 		return nil, err
 	}

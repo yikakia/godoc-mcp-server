@@ -9,7 +9,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v0.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
-	github.com/yikakia/cachalot v0.0.0-20260225062130-86236d982234
+	github.com/yikakia/cachalot v0.0.0-20260226140620-39a179c49a52
 	github.com/yikakia/cachalot/stores/ristretto v0.0.0-20260225062130-86236d982234
 	go.uber.org/multierr v1.11.0
 	golang.org/x/net v0.39.0

@@ -33,8 +33,10 @@ github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 h1:+jumHNA0Wrel
 github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8/go.mod h1:3n1Cwaq1E1/1lhQhtRK2ts/ZwZEhjcQeJQ1RuC6Q/8U=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/yikakia/cachalot v0.0.0-20260225062130-86236d982234 h1:D2Mx57XB4JGv3ChtV1p3B5s0EbhhLSi2RjT7+/akfnY=
-github.com/yikakia/cachalot v0.0.0-20260225062130-86236d982234/go.mod h1:74wyhyC1peldBzMoCeiaLcyGATDEZ4MWRlrNIBZPg9U=
+github.com/yikakia/cachalot v0.0.0-20260226135233-a9a45a11e796 h1:fY03bBMy2CP320+U1LxxTQYBD+Jyt7IlNANJta1sWfI=
+github.com/yikakia/cachalot v0.0.0-20260226135233-a9a45a11e796/go.mod h1:74wyhyC1peldBzMoCeiaLcyGATDEZ4MWRlrNIBZPg9U=
+github.com/yikakia/cachalot v0.0.0-20260226140620-39a179c49a52 h1:nk6IvlA6iDbEWKn7vyNiin+PqBZc1KknmvwjArUbnM4=
+github.com/yikakia/cachalot v0.0.0-20260226140620-39a179c49a52/go.mod h1:74wyhyC1peldBzMoCeiaLcyGATDEZ4MWRlrNIBZPg9U=
 github.com/yikakia/cachalot/stores/ristretto v0.0.0-20260225062130-86236d982234 h1:UAxMriW1SoaY32R8Kzkm0e2aLSQLFIkiNBOgL7E5ENM=
 github.com/yikakia/cachalot/stores/ristretto v0.0.0-20260225062130-86236d982234/go.mod h1:WN2JBmijMuebEVbNqmWbtcBcvCyq1hxUckgKmu3WhKg=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
