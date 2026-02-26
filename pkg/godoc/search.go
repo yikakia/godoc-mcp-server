@@ -1,11 +1,16 @@
 package godoc
 
 import (
+	"context"
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pkg/errors"
+	"github.com/yikakia/cachalot"
+	"github.com/yikakia/cachalot/core/cache"
 	"go.uber.org/multierr"
 	"golang.org/x/net/html"
 )
@@ -23,24 +28,57 @@ type SearchPackageInfo struct {
 	SubPackages []string `json:"sub_packages,omitempty"`
 }
 
+var searchCache = sync.OnceValue(func() cache.Cache[[]byte] {
+	b, err := cachalot.NewBuilder[[]byte]("search", store())
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO 压缩解压缩
+	b.WithCacheMissLoader(searchLoader).WithLogicExpireLoader(searchLoader)
+
+	build, err := b.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return build
+})
+
+func searchLoader(ctx context.Context, q string) ([]byte, error) {
+	if !strings.HasPrefix(q, "search") {
+		return nil, fmt.Errorf("search query must start with 'search'")
+	}
+
+	q = strings.TrimPrefix(q, "search")
+
+	resp, err := client().R().
+		SetQueryParams(map[string]string{
+			"q": q,
+			"m": "package",
+		}).
+		Get(baseURL() + "/search")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return resp.Body(), nil
+}
+
+func search(q string) ([]byte, error) {
+	get, err := searchCache().Get(context.Background(), "search"+q)
+	if err != nil {
+		return nil, err
+	}
+	return get, nil
+}
+
 func Search(query string) (*SearchResult, error) {
-	body, err := getWithFn("search"+query, func() ([]byte, error) {
-		resp, err := client().R().
-			SetQueryParams(map[string]string{
-				"q": query,
-				"m": "package",
-			}).
-			Get(baseURL() + "/search")
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return resp.Body(), nil
-	})
+	cacheGet, err := search(query)
 	if err != nil {
 		return nil, err
 	}
 
-	return extractSearchResult(string(body))
+	return extractSearchResult(string(cacheGet))
 }
 
 func extractSearchResult(query string) (*SearchResult, error) {

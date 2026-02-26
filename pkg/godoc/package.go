@@ -1,11 +1,15 @@
 package godoc
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pkg/errors"
+	"github.com/yikakia/cachalot"
+	"github.com/yikakia/cachalot/core/cache"
 	"go.uber.org/multierr"
 )
 
@@ -61,21 +65,52 @@ type GetPackageRequest struct {
 	NeedURL     bool
 }
 
+var pkgCache = sync.OnceValue(func() cache.Cache[[]byte] {
+	b, err := cachalot.NewBuilder[[]byte]("pkg", store())
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO 压缩解压缩
+	b.WithCacheMissLoader(pkgLoader).WithLogicExpireLoader(pkgLoader)
+
+	build, err := b.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return build
+})
+
+func pkgLoader(ctx context.Context, pkgName string) ([]byte, error) {
+	if !strings.HasPrefix(pkgName, "getPkg") {
+		return nil, fmt.Errorf("package name must start with getPkg")
+	}
+	pkgName = strings.TrimPrefix(pkgName, "getPkg")
+	resp, err := client().
+		R().
+		Get(baseURL() + "/" + pkgName)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return resp.Body(), nil
+}
+
+func getPkg(req GetPackageRequest) ([]byte, error) {
+	pkgGet, err := pkgCache().Get(context.Background(), "getPkg"+req.PackageName)
+	if err != nil {
+		return nil, err
+	}
+	return pkgGet, nil
+}
+
 func GetPackageDocument(req GetPackageRequest) (*PackageDocument, error) {
-	body, err := getWithFn("getPkg"+req.PackageName, func() ([]byte, error) {
-		resp, err := client().
-			R().
-			Get(baseURL() + "/" + req.PackageName)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return resp.Body(), nil
-	})
+	pkgGet, err := getPkg(req)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := extractDocResult(string(body), req)
+	result, err := extractDocResult(string(pkgGet), req)
 	if err != nil {
 		return nil, err
 	}

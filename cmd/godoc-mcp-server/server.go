@@ -7,7 +7,7 @@ import (
 
 var (
 	name    = "godoc-mcp-server"
-	version = "v1.0.0"
+	version = "v1.0.1"
 )
 
 func initServer() *mcp.Server {
