@@ -382,6 +382,7 @@ func extractSubPackages(doc *goquery.Document, req GetPackageRequest) ([]*SubPac
 	return subPackages, nil
 }
 
+// TODO 目录结构改变 需要适配
 func extractSubPackage(s *goquery.Selection) (*SubPackage, error) {
 	// Name
 	// 有 id 优先用id

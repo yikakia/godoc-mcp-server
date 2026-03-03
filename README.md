@@ -23,9 +23,10 @@ just use your client to request. it servers on stdio
 - searchPackage
   - [x] imported by how many packages
 - getPackageInfo
+  - [ ] fixme: subpackage need new adapter
   - [ ] get examples
 - release
-  - [x] use github actions to release for multiple platforms 
+  - [x] use github actions to release for multiple platforms
 
 ## Develop Experience
 The description is very important, when describing the param should tell the client how 

@@ -26,7 +26,9 @@ func initServer() *mcp.Server {
 		Description: "provide a query, search related golang packages from pkg.go.dev include " +
 			"name, path, synopsis, go doc url, imported by how many packages, subpackages in this package " +
 			"the path is the package full name. if want to use getPackageInfo. llm should pass the path as " +
-			"packageName to getPackageInfo. If return is null then means cannot find the package by the given name",
+			"packageName to getPackageInfo. If return is null then means cannot find the package by the given name." +
+			"If user provide name like github.com/yikakia/cachalot looks like a repo then should use getPackageInfo to " +
+			"get the info of package directly.",
 		Name: "searchPackages",
 	}, tool.GetSearchToolV2())
 
