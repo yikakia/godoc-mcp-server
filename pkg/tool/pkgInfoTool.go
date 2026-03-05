@@ -2,7 +2,6 @@ package tool
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pkg/errors"
@@ -23,22 +22,16 @@ type GetPkgInfoParams struct {
 	NeedURL bool `json:"needURL" jsonschema:"if user need the link to the definition"`
 }
 
-func GetPkgInfoTool() mcp.ToolHandlerFor[GetPkgInfoParams, any] {
-	return func(ctx context.Context, session *mcp.ServerSession, c *mcp.CallToolParamsFor[GetPkgInfoParams]) (*mcp.CallToolResultFor[any], error) {
+func GetPkgInfoTool() mcp.ToolHandlerFor[GetPkgInfoParams, *godoc.PackageDocument] {
+	return func(ctx context.Context, c *mcp.CallToolRequest, input GetPkgInfoParams) (*mcp.CallToolResult, *godoc.PackageDocument, error) {
 		pkgDoc, err := godoc.GetPackageDocument(godoc.GetPackageRequest{
-			PackageName: c.Arguments.PkgName,
-			NeedURL:     c.Arguments.NeedURL,
+			PackageName: input.PkgName,
+			NeedURL:     input.NeedURL,
 		})
 		if err != nil {
-			return nil, errors.WithMessage(err, "get pkg info failed")
-		}
-		marshal, err := json.Marshal(pkgDoc)
-		if err != nil {
-			return nil, errors.Wrap(err, "marshal pkgDoc failed")
+			return nil, nil, errors.WithMessage(err, "get pkg info failed")
 		}
 
-		return &mcp.CallToolResultFor[any]{
-			Content: []mcp.Content{&mcp.TextContent{Text: string(marshal)}},
-		}, nil
+		return nil, pkgDoc, nil
 	}
 }

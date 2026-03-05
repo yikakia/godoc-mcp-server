@@ -350,8 +350,8 @@ func extractSubPackages(doc *goquery.Document, req GetPackageRequest) ([]*SubPac
 		Children().
 		Each(func(i int, s *goquery.Selection) {
 
-			v, hasSubPackage := s.Attr("data-aria-controls")
-			fmt.Println(v, hasSubPackage, goquery.NodeName(s))
+			_, hasSubPackage := s.Attr("data-aria-controls")
+			//fmt.Println(v, hasSubPackage, goquery.NodeName(s))
 
 			if hasSubPackage {
 				// 目录要处理自己和子包

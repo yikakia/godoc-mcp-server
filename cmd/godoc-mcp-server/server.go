@@ -7,7 +7,7 @@ import (
 
 var (
 	name    = "godoc-mcp-server"
-	version = "v1.0.1"
+	version = "v1.0.3"
 )
 
 func initServer() *mcp.Server {
@@ -30,7 +30,7 @@ func initServer() *mcp.Server {
 			"If user provide name like github.com/yikakia/cachalot looks like a repo then should use getPackageInfo to " +
 			"get the info of package directly.",
 		Name: "searchPackages",
-	}, tool.GetSearchToolV2())
+	}, tool.GetSearchTool())
 
 	return server
 }

@@ -2,7 +2,6 @@ package tool
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pkg/errors"
@@ -13,19 +12,14 @@ type searchParams struct {
 	Q string `json:"q" jsonschema:"query string"`
 }
 
-func GetSearchToolV2() mcp.ToolHandlerFor[searchParams, any] {
-	return func(ctx context.Context, session *mcp.ServerSession, c *mcp.CallToolParamsFor[searchParams]) (*mcp.CallToolResultFor[any], error) {
+func GetSearchTool() mcp.ToolHandlerFor[searchParams, *godoc.SearchResult] {
+	return func(ctx context.Context, c *mcp.CallToolRequest, input searchParams) (*mcp.CallToolResult, *godoc.SearchResult, error) {
 
-		search, err := godoc.Search(c.Arguments.Q)
+		search, err := godoc.Search(input.Q)
 		if err != nil {
-			return nil, errors.WithMessage(err, "search failed.")
+			return nil, nil, errors.WithMessage(err, "search failed.")
 		}
-		marshal, err := json.Marshal(search.Packages)
-		if err != nil {
-			return nil, errors.Wrap(err, "marshal pkgs failed.")
-		}
-		return &mcp.CallToolResultFor[any]{
-			Content: []mcp.Content{&mcp.TextContent{Text: string(marshal)}},
-		}, nil
+
+		return nil, search, nil
 	}
 }
