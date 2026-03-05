@@ -346,9 +346,11 @@ func extractSubPackages(doc *goquery.Document, req GetPackageRequest) ([]*SubPac
 	var err error
 
 	doc.Find("table[data-test-id='UnitDirectories-table']").
-		Find("tbody").
-		Children().
+		Find("tr").
 		Each(func(i int, s *goquery.Selection) {
+			if s.HasClass("UnitDirectories-tableHeader") {
+				return
+			}
 
 			_, hasSubPackage := s.Attr("data-aria-controls")
 			//fmt.Println(v, hasSubPackage, goquery.NodeName(s))
@@ -382,27 +384,25 @@ func extractSubPackages(doc *goquery.Document, req GetPackageRequest) ([]*SubPac
 	return subPackages, nil
 }
 
-// TODO 目录结构改变 需要适配
 func extractSubPackage(s *goquery.Selection) (*SubPackage, error) {
 	// Name
 	// 有 id 优先用id
 	// 没有 id 用 a 标签的文本
-	name := s.AttrOr("data-id", "")
+	name := strings.TrimSpace(s.AttrOr("data-id", ""))
 	if name == "" {
-		name = s.Find("a").Text()
+		name = strings.TrimSpace(s.Find("div.UnitDirectories-pathCell a").First().Text())
+		if name == "" {
+			name = strings.TrimSpace(s.Find("a").First().Text())
+		}
 	} else {
-		name = strings.TrimSpace(name)
 		name = strings.ReplaceAll(name, "-", "/")
 	}
 	if name == "" {
 		return nil, nil
 	}
 	// comment
-	comment := s.Find("td.UnitDirectories-desktopSynopsis").Text()
+	comment := s.Find("td.UnitDirectories-desktopSynopsis").First().Text()
 	comment = strings.TrimSpace(comment)
-	if comment == "" {
-		return nil, nil
-	}
 
 	return &SubPackage{
 		Name:    name,
@@ -413,17 +413,21 @@ func extractSubPackage(s *goquery.Selection) (*SubPackage, error) {
 func extractSubPackageAsDir(s *goquery.Selection, req GetPackageRequest) (*SubPackage, error) {
 
 	// pathCell name
-	name := s.Find("div.UnitDirectories-pathCell").Find("span").Text()
+	name := s.Find("div.UnitDirectories-pathCell span").First().Text()
 	name = strings.TrimSpace(name)
 	if name == "" {
-		name = s.Find("a").Text()
+		name = s.Find("div.UnitDirectories-pathCell a").First().Text()
 		name = strings.TrimSpace(name)
+		if name == "" {
+			name = s.Find("a").First().Text()
+			name = strings.TrimSpace(name)
+		}
 		if name == "" {
 			return nil, nil
 		}
 	}
 	// comment
-	comment := s.Find("td.UnitDirectories-desktopSynopsis").Text()
+	comment := s.Find("td.UnitDirectories-desktopSynopsis").First().Text()
 	comment = strings.TrimSpace(comment)
 
 	return &SubPackage{
