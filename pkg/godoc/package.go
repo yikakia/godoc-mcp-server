@@ -21,6 +21,7 @@ type PackageDocument struct {
 	Functions   []FunctionBlock
 	Types       []TypeBlock
 	SubPackages []*SubPackage
+	Examples    []ExampleBlock
 }
 
 type ConstBlock struct {
@@ -59,6 +60,12 @@ type TypeMethod struct {
 type SubPackage struct {
 	Name    string
 	Comment string
+}
+
+type ExampleBlock struct {
+	Name   string
+	Code   string
+	Output string
 }
 
 type GetPackageRequest struct {
@@ -146,6 +153,10 @@ func extractDocResult(html string, req GetPackageRequest) (*PackageDocument, err
 	if err != nil {
 		return nil, err
 	}
+	examples, err := extractDocExamples(doc)
+	if err != nil {
+		return nil, err
+	}
 
 	return &PackageDocument{
 		Overview:    overview,
@@ -154,6 +165,7 @@ func extractDocResult(html string, req GetPackageRequest) (*PackageDocument, err
 		Functions:   fns,
 		Types:       types,
 		SubPackages: subPackages,
+		Examples:    examples,
 	}, nil
 }
 
@@ -339,6 +351,37 @@ func extractDocTypeMethods(s *goquery.Selection, req GetPackageRequest) ([]TypeM
 			methods = append(methods, method)
 		})
 	return methods, nil
+}
+
+func extractDocExamples(doc *goquery.Document) ([]ExampleBlock, error) {
+	var examples []ExampleBlock
+
+	doc.Find("section.Documentation-examples a.js-exampleHref").
+		Each(func(i int, s *goquery.Selection) {
+			name := strings.TrimSpace(s.Text())
+			href := strings.TrimSpace(s.AttrOr("href", ""))
+			id := strings.TrimPrefix(href, "#")
+			if name == "" || id == "" {
+				return
+			}
+
+			details := doc.Find(fmt.Sprintf("details[id='%s']", id)).First()
+
+			code := ""
+			output := ""
+			if details.Length() > 0 {
+				code = strings.TrimSpace(details.Find("pre.Documentation-exampleCode").First().Text())
+				output = strings.TrimSpace(details.Find("span.Documentation-exampleOutput").First().Text())
+			}
+
+			examples = append(examples, ExampleBlock{
+				Name:   name,
+				Code:   code,
+				Output: output,
+			})
+		})
+
+	return examples, nil
 }
 
 func extractSubPackages(doc *goquery.Document, req GetPackageRequest) ([]*SubPackage, error) {

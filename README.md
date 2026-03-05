@@ -24,7 +24,7 @@ just use your client to request. it servers on stdio
   - [x] imported by how many packages
 - getPackageInfo
   - [x] fixme: subpackage need new adapter
-  - [ ] get examples
+  - [x] get examples
 - release
   - [x] use github actions to release for multiple platforms
 
