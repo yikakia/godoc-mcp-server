@@ -45,10 +45,17 @@ type FunctionBlock struct {
 }
 
 type TypeBlock struct {
-	SourceURL   string
-	Definition  string
-	Comment     string
-	TypeMethods []TypeMethod
+	SourceURL     string
+	Definition    string
+	Comment       string
+	TypeFunctions []TypeFunction
+	TypeMethods   []TypeMethod
+}
+
+type TypeFunction struct {
+	SourceURL  string
+	Definition string
+	Comment    string
 }
 
 type TypeMethod struct {
@@ -295,18 +302,21 @@ func extractDocTypes(doc *goquery.Document, req GetPackageRequest) ([]TypeBlock,
 					AttrOr("href", "")
 			}
 
-			// 找到 div.Documentation-declaration 是定义
-			s.Find("div.Documentation-declaration").
-				Each(func(i int, s *goquery.Selection) {
-					// 找到 pre 标签，里面是定义
-					var lines []string
-					s.Find("pre").Each(func(i int, s *goquery.Selection) {
-						lines = append(lines, s.Text())
-					})
-					tpb.Definition = strings.Join(lines, "\n")
-				})
-			// 找到p标签 是注释
-			tpb.Comment = s.Find("p").Text()
+			// 只取类型自身 declaration，避免被 typeFunc/typeMethod 的 declaration 覆盖
+			tpb.Definition = extractDeclarationText(s.ChildrenFiltered("div.Documentation-declaration").First())
+			if tpb.Definition == "" {
+				tpb.Definition = extractDeclarationText(s.Find("div.Documentation-declaration").First())
+			}
+			// 只取类型自身注释
+			tpb.Comment = strings.TrimSpace(s.ChildrenFiltered("p").First().Text())
+
+			tpFunctions, _err := extractDocTypeFunctions(s, req)
+			if _err != nil {
+				err = multierr.Append(err, _err)
+				return
+			}
+			tpb.TypeFunctions = tpFunctions
+
 			tpMethods, _err := extractDocTypeMethods(s, req)
 			if _err != nil {
 				err = multierr.Append(err, _err)
@@ -319,6 +329,32 @@ func extractDocTypes(doc *goquery.Document, req GetPackageRequest) ([]TypeBlock,
 		return nil, err
 	}
 	return types, nil
+}
+
+// 需要传入 extractDocTypes 中的 Documentation-type 节点
+func extractDocTypeFunctions(s *goquery.Selection, req GetPackageRequest) ([]TypeFunction, error) {
+	var functions []TypeFunction
+	s.
+		Find("div.Documentation-typeFunc").
+		Each(func(i int, s *goquery.Selection) {
+			fnb := TypeFunction{}
+			if req.NeedURL {
+				// url
+				fnb.SourceURL = s.
+					Find("h4.Documentation-typeFuncHeader").
+					Find("a.Documentation-source").
+					AttrOr("href", "")
+			}
+
+			fnb.Definition = extractDeclarationText(s.ChildrenFiltered("div.Documentation-declaration").First())
+			if fnb.Definition == "" {
+				fnb.Definition = extractDeclarationText(s.Find("div.Documentation-declaration").First())
+			}
+			// p 标签是注释
+			fnb.Comment = strings.TrimSpace(s.ChildrenFiltered("p").First().Text())
+			functions = append(functions, fnb)
+		})
+	return functions, nil
 }
 
 // 需要传入 extractDocTypes 中的 Documentation-type 节点
@@ -336,21 +372,26 @@ func extractDocTypeMethods(s *goquery.Selection, req GetPackageRequest) ([]TypeM
 					AttrOr("href", "")
 			}
 
-			// 定义
-			s.Find("div.Documentation-declaration").
-				Each(func(i int, s *goquery.Selection) {
-					// 找到 pre 标签，里面是定义
-					var lines []string
-					s.Find("pre").Each(func(i int, s *goquery.Selection) {
-						lines = append(lines, s.Text())
-					})
-					method.Definition = strings.Join(lines, "\n")
-				})
+			method.Definition = extractDeclarationText(s.ChildrenFiltered("div.Documentation-declaration").First())
+			if method.Definition == "" {
+				method.Definition = extractDeclarationText(s.Find("div.Documentation-declaration").First())
+			}
 			// p 标签是注释
-			method.Comment = s.Find("p").Text()
+			method.Comment = strings.TrimSpace(s.ChildrenFiltered("p").First().Text())
 			methods = append(methods, method)
 		})
 	return methods, nil
+}
+
+func extractDeclarationText(s *goquery.Selection) string {
+	if s == nil || s.Length() == 0 {
+		return ""
+	}
+	var lines []string
+	s.Find("pre").Each(func(i int, s *goquery.Selection) {
+		lines = append(lines, strings.TrimSpace(s.Text()))
+	})
+	return strings.Join(lines, "\n")
 }
 
 func extractDocExamples(doc *goquery.Document) ([]ExampleBlock, error) {
