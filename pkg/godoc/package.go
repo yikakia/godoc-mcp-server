@@ -210,7 +210,10 @@ func extractDocConsts(doc *goquery.Document, req GetPackageRequest) ([]ConstBloc
 			// 获取p标签，放到最后一个元素里
 			// 可能没有注释 此时 class = Documentation-empty
 			if s.Is("p") && s.AttrOr("class", "") == "" {
-				consts[len(consts)-1].Comment = s.Text()
+				if len(consts) == 0 {
+					return
+				}
+				consts[len(consts)-1].Comment = appendParagraphText(consts[len(consts)-1].Comment, s.Text())
 				return
 			}
 			// 其他标签，忽略
@@ -244,7 +247,10 @@ func extractDocVariables(doc *goquery.Document, req GetPackageRequest) ([]Variab
 			// 获取p标签，放到最后一个元素里
 			// 可能没有注释 此时 class = Documentation-empty
 			if s.Is("p") && s.AttrOr("class", "") == "" {
-				vars[len(vars)-1].Comment = s.Text()
+				if len(vars) == 0 {
+					return
+				}
+				vars[len(vars)-1].Comment = appendParagraphText(vars[len(vars)-1].Comment, s.Text())
 				return
 			}
 			// 其他标签，忽略
@@ -276,7 +282,7 @@ func extractDocFunctions(doc *goquery.Document, req GetPackageRequest) ([]Functi
 					fnb.Definition = strings.Join(lines, "\n")
 				})
 			// 找到p标签 是注释
-			fnb.Comment = s.Find("p").Text()
+			fnb.Comment = extractDirectParagraphText(s)
 			fns = append(fns, fnb)
 		})
 
@@ -308,7 +314,7 @@ func extractDocTypes(doc *goquery.Document, req GetPackageRequest) ([]TypeBlock,
 				tpb.Definition = extractDeclarationText(s.Find("div.Documentation-declaration").First())
 			}
 			// 只取类型自身注释
-			tpb.Comment = strings.TrimSpace(s.ChildrenFiltered("p").First().Text())
+			tpb.Comment = extractDirectParagraphText(s)
 
 			tpFunctions, _err := extractDocTypeFunctions(s, req)
 			if _err != nil {
@@ -351,7 +357,7 @@ func extractDocTypeFunctions(s *goquery.Selection, req GetPackageRequest) ([]Typ
 				fnb.Definition = extractDeclarationText(s.Find("div.Documentation-declaration").First())
 			}
 			// p 标签是注释
-			fnb.Comment = strings.TrimSpace(s.ChildrenFiltered("p").First().Text())
+			fnb.Comment = extractDirectParagraphText(s)
 			functions = append(functions, fnb)
 		})
 	return functions, nil
@@ -377,10 +383,39 @@ func extractDocTypeMethods(s *goquery.Selection, req GetPackageRequest) ([]TypeM
 				method.Definition = extractDeclarationText(s.Find("div.Documentation-declaration").First())
 			}
 			// p 标签是注释
-			method.Comment = strings.TrimSpace(s.ChildrenFiltered("p").First().Text())
+			method.Comment = extractDirectParagraphText(s)
 			methods = append(methods, method)
 		})
 	return methods, nil
+}
+
+func extractDirectParagraphText(s *goquery.Selection) string {
+	if s == nil || s.Length() == 0 {
+		return ""
+	}
+	var paragraphs []string
+	s.ChildrenFiltered("p").Each(func(i int, p *goquery.Selection) {
+		if strings.TrimSpace(p.AttrOr("class", "")) != "" {
+			return
+		}
+		text := strings.TrimSpace(p.Text())
+		if text == "" {
+			return
+		}
+		paragraphs = append(paragraphs, text)
+	})
+	return strings.Join(paragraphs, "\n\n")
+}
+
+func appendParagraphText(current string, paragraph string) string {
+	paragraph = strings.TrimSpace(paragraph)
+	if paragraph == "" {
+		return current
+	}
+	if current == "" {
+		return paragraph
+	}
+	return current + "\n\n" + paragraph
 }
 
 func extractDeclarationText(s *goquery.Selection) string {
