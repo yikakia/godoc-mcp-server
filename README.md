@@ -12,6 +12,10 @@ Or you can install it from source, compile it by yourself:
 go install github.com/yikakia/godoc-mcp-server/cmd/godoc-mcp-server@latest
 ```
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/yikakia-godoc-mcp-server).
+
 ## Usage
 
 just use your client to request. it servers on stdio
